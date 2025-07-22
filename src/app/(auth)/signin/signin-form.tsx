@@ -15,9 +15,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { AuthFormValues, signinSchema } from "../schema";
+import { IconBrandGoogle } from "@tabler/icons-react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { LoaderIcon } from "lucide-react";
 
 export function SigninForm() {
   const [step, setStep] = useState<"signIn" | "signUp">("signIn");
+
+  const { signIn } = useAuthActions();
+  const [loading, setLoading] = useState(false);
+  const [googleloading, setGoogleLoading] = useState(false);
+
+  const router = useRouter();
 
   const form = useForm<AuthFormValues>({
     resolver: zodResolver(signinSchema),
@@ -27,8 +38,41 @@ export function SigninForm() {
     },
   });
 
+  async function handleGoogleLogin() {
+    setGoogleLoading(true);
+    try {
+      await signIn("google", {
+        redirectTo: "/notes",
+      });
+      toast.success("Logging you in...");
+    } catch (error) {
+      console.error(error);
+      toast.error("Sign in with google failed!");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   async function onSubmit(values: AuthFormValues) {
     // TODO: Sign in
+    setLoading(true);
+    try {
+      await signIn("password", {
+        ...values,
+        flow: step,
+      });
+      toast.success(
+        step === "signIn"
+          ? "Signed in successfully"
+          : "Account created successfully"
+      );
+      router.push("/notes");
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -81,15 +125,21 @@ export function SigninForm() {
                 {form.formState.errors.root.message}
               </div>
             )}
-            <Button type="submit" className="w-full">
-              {step === "signIn" ? "Sign In" : "Sign Up"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <LoaderIcon className="animate-spin size-5" />
+              ) : step === "signIn" ? (
+                "Sign In"
+              ) : (
+                "Sign Up"
+              )}
             </Button>
           </form>
         </Form>
         <Button
           variant="link"
           type="button"
-          className="w-full text-sm text-muted-foreground cursor-pointer"
+          className="w-full text-sm text-muted-foreground cursor-pointer mb-1"
           onClick={() => {
             setStep(step === "signIn" ? "signUp" : "signIn");
             form.reset(); // Reset form errors and values when switching modes
@@ -98,6 +148,30 @@ export function SigninForm() {
           {step === "signIn"
             ? "Don't have an account? Sign Up"
             : "Already have an account? Sign In"}
+        </Button>
+        {/* --or-- separator */}
+        <div className="flex items-center my-2">
+          <div className="flex-grow border-t border-muted-foreground/30" />
+          <span className="mx-4 text-muted-foreground text-xs font-medium">
+            or
+          </span>
+          <div className="flex-grow border-t border-muted-foreground/30" />
+        </div>
+        {/* Sign in with Google button */}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full flex items-center justify-center gap-2 mt-2"
+          onClick={handleGoogleLogin}
+        >
+          {googleloading ? (
+            <LoaderIcon className="size-5 animate-spin" />
+          ) : (
+            <>
+              <IconBrandGoogle className="size-5" />
+              <p>Sign in with Google </p>
+            </>
+          )}
         </Button>
       </div>
     </div>

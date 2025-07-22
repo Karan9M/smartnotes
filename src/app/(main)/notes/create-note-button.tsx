@@ -7,24 +7,27 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { useAction } from "convex/react";
+import { LoaderIcon, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "../../../../convex/_generated/api";
 
 const noteFormSchema = z.object({
   title: z.string().min(1, {
@@ -55,6 +58,7 @@ interface CreateNoteDialogProps {
 }
 
 function CreateNoteDialog({ open, onOpenChange }: CreateNoteDialogProps) {
+  const createNotes = useAction(api.notesActions.createNote);
   const form = useForm<z.infer<typeof noteFormSchema>>({
     resolver: zodResolver(noteFormSchema),
     defaultValues: {
@@ -63,8 +67,22 @@ function CreateNoteDialog({ open, onOpenChange }: CreateNoteDialogProps) {
     },
   });
 
+  const isSubmitting = form.formState.isSubmitting;
+
   async function onSubmit(values: z.infer<typeof noteFormSchema>) {
     // TODO: Create note from form input
+    try {
+      await createNotes({
+        title: values.title,
+        body: values.body,
+      });
+      toast.success("Note created!");
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to create note.");
+    }
   }
 
   return (
@@ -106,7 +124,13 @@ function CreateNoteDialog({ open, onOpenChange }: CreateNoteDialogProps) {
               )}
             />
             <DialogFooter>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <LoaderIcon className="animate-spin" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
