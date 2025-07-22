@@ -41,9 +41,7 @@ export function SigninForm() {
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     try {
-      await signIn("google", {
-        redirectTo: "/notes",
-      });
+      await signIn("google");
       toast.success("Logging you in...");
     } catch (error) {
       console.error(error);
